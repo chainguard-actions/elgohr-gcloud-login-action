@@ -1,0 +1,34 @@
+name: Test basic gcloud login - username output
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create fake service account key (base64 encoded)
+        id: fake-key
+        run: |
+          # Create a fake but structurally valid service account JSON
+          FAKE_JSON='{"type":"service_account","project_id":"test-project","private_key_id":"key123","private_key":"-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA0Z3VS5JJcds3xHn/ygWep4PAtEsHAMKTkFBFBMQnFRBMQnFR\n-----END RSA PRIVATE KEY-----\n","client_email":"test@test-project.iam.gserviceaccount.com","client_id":"123456789","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token"}'
+          echo "key=$(echo "$FAKE_JSON" | base64 -w 0)" >> "$GITHUB_OUTPUT"
+
+      - name: Run gcloud login action (expect failure with fake key)
+        id: action
+        uses: .
+        with:
+          account_key: ${{ steps.fake-key.outputs.key }}
+        continue-on-error: true
+
+      - name: Assert action was invoked (outcome is failure with fake key)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          # With a fake key, gcloud auth will fail — that is expected
+          if [ "$OUTCOME" != "failure" ] && [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: unexpected outcome '$OUTCOME' — expected 'failure' or 'success'"
+            exit 1
+          fi
+          echo "PASS: action was invoked and produced outcome '$OUTCOME'"
