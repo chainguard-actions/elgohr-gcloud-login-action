@@ -1,17 +1,42 @@
-# elgohr/gcloud-login-action
+# gcloud-Container-Registry-Login-Action
 
-Logs into Google Cloud Container Registry and provides Docker credentials
+[![Actions Status](https://github.com/elgohr/gcloud-login-action/workflows/Test/badge.svg)](https://github.com/elgohr/gcloud-login-action/actions)
 
-Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at [https://github.com/elgohr/gcloud-login-action](https://github.com/elgohr/gcloud-login-action).
+This Action for Docker logs into [Google Cloud Container Registry](https://cloud.google.com/container-registry/) and gets the timely bound credentials for Docker.
 
-## Versions
+## Usage
 
-| Version | Tag | Upstream commit |
-|---------|-----|-----------------|
-| 0.1 | [`0.1`](https://github.com/chainguard-actions/elgohr-gcloud-login-action/tree/0.1) | [`7b7cc58`](https://github.com/elgohr/gcloud-login-action/commit/7b7cc5837ffe9e84b1253d2bcdb80ab634280647) |
-| 0.3 | [`0.3`](https://github.com/chainguard-actions/elgohr-gcloud-login-action/tree/0.3) | [`de70cfd`](https://github.com/elgohr/gcloud-login-action/commit/de70cfde1a2417253ff24a84e755fe77c2c0e8d1) |
-| v1 | [`v1`](https://github.com/chainguard-actions/elgohr-gcloud-login-action/tree/v1) | [`0ad83be`](https://github.com/elgohr/gcloud-login-action/commit/0ad83be962334f4fc80fc95f7af33f3dc0802305) |
-| v2 | [`v2`](https://github.com/chainguard-actions/elgohr-gcloud-login-action/tree/v2) | [`df5a710`](https://github.com/elgohr/gcloud-login-action/commit/df5a710f23519087e3ae4afe871bbfe273769338) |
+## Example pipeline
+
+```yaml
+name: Publish Docker
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: Login to gcloud registry
+      id: gcloud
+      uses: elgohr/gcloud-login-action@master
+      with:
+        account_key: ${{ secrets.GCLOUD_KEY }}
+    - name: Publish to Registry
+      uses: elgohr/Publish-Docker-Github-Action@master
+      with:
+        name: myDocker/repository
+        username: ${{ steps.gcloud.outputs.username }}
+        password: ${{ steps.gcloud.outputs.password }}
+        registry: gcr.io, us.gcr.io, eu.gcr.io or asia.gcr.io
+```
+
+## Mandatory arguments
+
+`account_key` Base64 encoded service account key exported as JSON  
+
+## Outputs
+`username` the username for logging in  
+`password` the password for logging in  
 
 ## Privacy
 

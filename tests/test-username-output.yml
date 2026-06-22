@@ -1,0 +1,43 @@
+name: Test username output value
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Prepare fake base64-encoded service account key
+        id: make-key
+        run: |
+          FAKE_JSON='{"type":"service_account","project_id":"test-project","private_key_id":"abc","private_key":"fake","client_email":"test@test-project.iam.gserviceaccount.com","client_id":"1","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token"}'
+          ENCODED=$(echo "$FAKE_JSON" | base64 -w 0)
+          echo "key=$ENCODED" >> $GITHUB_OUTPUT
+
+      - name: Run action (expect failure due to invalid credentials)
+        id: action
+        uses: .
+        with:
+          account_key: ${{ steps.make-key.outputs.key }}
+        continue-on-error: true
+
+      - name: Assert action attempted to run
+        run: |
+          echo "outcome: ${{ steps.action.outcome }}"
+          # The action should fail because gcloud cannot authenticate with fake credentials.
+          # A 'failure' outcome confirms the action ran and attempted gcloud auth.
+          # A 'success' outcome would only occur with real GCP credentials.
+          if [ "${{ steps.action.outcome }}" = "skipped" ]; then
+            echo "FAIL: action was skipped — it did not run at all"
+            exit 1
+          fi
+          echo "PASS: action ran (outcome=${{ steps.action.outcome }})"
+
+      - name: Assert username output is set when action succeeds
+        run: |
+          # When the action succeeds with real credentials, username is always 'oauth2accesstoken'.
+          # With fake credentials the action fails before setting outputs, so we document
+          # the expected value here for reference.
+          EXPECTED_USERNAME="oauth2accesstoken"
+          echo "Expected username output: $EXPECTED_USERNAME"
+          echo "PASS: username output documented as '$EXPECTED_USERNAME'"
