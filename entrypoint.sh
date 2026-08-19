@@ -7,4 +7,5 @@ echo "::set-output name=username::oauth2accesstoken"
 TOKEN=$(gcloud auth print-access-token)
 echo "::add-mask::${TOKEN}"
 echo "::set-output name=password::${TOKEN}"
-echo "password=${TOKEN}" >> "$GITHUB_ENV"
+safe_token=$(printf '%s' "${TOKEN}" | tr -d '\n\r')
+echo "password=${safe_token}" >> "$GITHUB_ENV"

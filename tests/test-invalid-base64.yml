@@ -1,0 +1,27 @@
+name: Test invalid base64 account key
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run action with invalid base64 key (expect failure)
+        id: action
+        uses: .
+        with:
+          # Not valid base64 — should cause base64 -d to fail
+          account_key: "!!!not-valid-base64!!!"
+        continue-on-error: true
+
+      - name: Assert action failed with invalid base64
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected action to fail with invalid base64, but got outcome: $OUTCOME"
+            exit 1
+          fi
+          echo "PASS: action correctly failed with invalid base64 input"
