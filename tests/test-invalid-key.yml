@@ -1,0 +1,33 @@
+name: Test invalid account key
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create fake base64-encoded JSON key
+        id: fake-key
+        run: |
+          # Create a fake GCP service account JSON key (valid JSON, valid base64, but not a real key)
+          FAKE_JSON='{"type":"service_account","project_id":"fake-project","private_key_id":"abc123","private_key":"-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA0Z3VS5JJcds3xHn/ygWep4PAtEsHAFPpF9y9ZQFJ4iNMJZME\n-----END RSA PRIVATE KEY-----\n","client_email":"fake@fake-project.iam.gserviceaccount.com","client_id":"123456789","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token"}'
+          ENCODED=$(echo "$FAKE_JSON" | base64 -w 0)
+          echo "key=$ENCODED" >> $GITHUB_OUTPUT
+
+      - id: action
+        uses: .
+        with:
+          account_key: ${{ steps.fake-key.outputs.key }}
+        continue-on-error: true
+
+      - name: Assert action failed with invalid key
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected action to fail with an invalid key, but got outcome: $OUTCOME"
+            exit 1
+          fi
+          echo "PASS: action correctly failed with invalid key"
