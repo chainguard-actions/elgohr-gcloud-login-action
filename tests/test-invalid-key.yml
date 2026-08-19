@@ -1,0 +1,25 @@
+name: Test invalid account key handling
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Test action fails with invalid key
+        id: action
+        uses: .
+        with:
+          # A base64-encoded fake JSON that is not a valid GCP service account key
+          account_key: eyJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsICJwcm9qZWN0X2lkIjogImZha2UtcHJvamVjdCIsICJwcml2YXRlX2tleV9pZCI6ICJmYWtlIiwgInByaXZhdGVfa2V5IjogImZha2Uta2V5IiwgImNsaWVudF9lbWFpbCI6ICJmYWtlQGZha2UtcHJvamVjdC5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsICJjbGllbnRfaWQiOiAiMTIzNDU2Nzg5MCIsICJhdXRoX3VyaSI6ICJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20vby9vYXV0aDIvYXV0aCIsICJ0b2tlbl91cmkiOiAiaHR0cHM6Ly9vYXV0aDIuZ29vZ2xlYXBpcy5jb20vdG9rZW4iLCAiYXV0aF9wcm92aWRlcl94NTA5X2NlcnRfdXJsIjogImh0dHBzOi8vd3d3Lmdvb2dsZWFwaXMuY29tL29hdXRoMi92MS9jZXJ0cyIsICJjbGllbnRfeDUwOV9jZXJ0X3VybCI6ICJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9yb2JvdC92MS9tZXRhZGF0YS94NTA5L2Zha2UifQ==
+        continue-on-error: true
+      - name: Assert action failed with invalid key
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected action to fail with an invalid key, but got outcome: $OUTCOME"
+            exit 1
+          fi
+          echo "PASS: action correctly failed with invalid key"
