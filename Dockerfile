@@ -1,4 +1,4 @@
-FROM gcr.io/cloud-builders/gcloud-slim@sha256:8eb8ff9c51b9a73ad54caa9f6b3f6cca0b254d0c3db1f4a78faec074fee36c5a as runtime # latest
+FROM gcr.io/cloud-builders/gcloud-slim as runtime
 ADD entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 

@@ -1,0 +1,33 @@
+name: Test invalid JSON key handling
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create a base64-encoded fake service account JSON
+        id: prep
+        run: |
+          # Create a JSON that looks like a service account key but is not valid
+          FAKE_KEY=$(echo '{"type":"service_account","project_id":"fake-project","private_key_id":"fake-id","private_key":"fake-key","client_email":"fake@fake-project.iam.gserviceaccount.com","client_id":"123456789","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token"}' | base64 -w 0)
+          echo "fake_key=$FAKE_KEY" >> $GITHUB_OUTPUT
+
+      - name: Run action with fake service account JSON (expect failure)
+        id: action
+        uses: .
+        with:
+          account_key: ${{ steps.prep.outputs.fake_key }}
+        continue-on-error: true
+
+      - name: Assert action failed with fake service account JSON
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected action to fail with fake service account JSON, but got outcome: $OUTCOME"
+            exit 1
+          fi
+          echo "PASS: action correctly failed with fake service account JSON"
