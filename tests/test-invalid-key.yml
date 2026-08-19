@@ -6,27 +6,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Create fake service account key
-        id: fake-key
-        run: |
-          # Create a fake (but properly formatted) service account JSON
-          FAKE_KEY=$(echo '{"type":"service_account","project_id":"fake-project","private_key_id":"abc123","private_key":"-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA0Z3VS5JJcds3xHn/ygWep4PAtEsHAqKFPmBKqCzBFMFONNAB\n-----END RSA PRIVATE KEY-----\n","client_email":"fake@fake-project.iam.gserviceaccount.com","client_id":"123456789","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token"}' | base64 -w 0)
-          echo "key=$FAKE_KEY" >> $GITHUB_OUTPUT
-
-      - id: action
+      - name: Run action with invalid (non-service-account) key
+        id: action
         uses: .
         with:
-          account_key: ${{ steps.fake-key.outputs.key }}
+          # base64 of "not-valid-json" — valid base64 but not a GCP service account JSON
+          account_key: bm90LXZhbGlkLWpzb24=
         continue-on-error: true
-
-      - name: Assert action failed with invalid credentials
+      - name: Assert action failed with invalid key
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" != "failure" ]; then
-            echo "FAIL: expected action to fail with invalid credentials, got '$OUTCOME'"
+            echo "FAIL: expected action to fail with invalid key, but got outcome: $OUTCOME"
             exit 1
           fi
-          echo "PASS: action correctly failed with invalid credentials"
+          echo "PASS: action correctly failed with invalid service account key"

@@ -1,0 +1,42 @@
+on:
+  pull_request_target:
+    branches: [ master ]
+    types: [ opened ]
+permissions: {}
+jobs:
+  enableAutoMerge:
+    runs-on: ubuntu-latest
+    permissions: {}
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    steps:
+      - uses: octokit/graphql-action@f7836e89a7e5bac63911bbe9653c21147b3d9bc3 # v2.x
+        id: get_pull_request_id
+        env:
+          GITHUB_TOKEN: ${{ secrets.AUTO_UPDATE }}
+        with:
+          query: |
+            query GetPullRequest($owner:String!,$repository:String!,$pull_request_number:Int!) {
+              repository(owner:$owner,name:$repository) {
+                pullRequest(number:$pull_request_number) {
+                  id
+                }
+              }
+            }
+          owner: ${{ github.event.repository.owner.login }}
+          repository: ${{ github.event.repository.name }}
+          pull_request_number: ${{ github.event.pull_request.number }}
+      - uses: octokit/graphql-action@f7836e89a7e5bac63911bbe9653c21147b3d9bc3 # v2.x
+        id: automerge_pr
+        env:
+          GITHUB_TOKEN: ${{ secrets.AUTO_UPDATE }}
+        with:
+          query: |
+            mutation EnableAutomerge($pull_request_id:String!) {
+              addComment(input: {
+                subjectId: $pull_request_id,
+                body: "@dependabot merge"
+              }) {
+                __typename
+              }
+            }
+          pull_request_id: ${{ fromJson(steps.get_pull_request_id.outputs.data).repository.pullRequest.id }}

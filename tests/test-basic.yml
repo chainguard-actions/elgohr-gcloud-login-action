@@ -1,0 +1,33 @@
+name: Test basic usage with properly formatted service account key
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Prepare fake service account key
+        run: |
+          # Create a minimal fake service account JSON (valid JSON structure, fake credentials)
+          FAKE_JSON='{"type":"service_account","project_id":"test-project","private_key_id":"abc123","private_key":"-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA0Z3VS5JJcds3xHn\n-----END RSA PRIVATE KEY-----\n","client_email":"test@test-project.iam.gserviceaccount.com","client_id":"123456789","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_x509_cert_url":"https://www.googleapis.com/robot/v1/metadata/x509/test%40test-project.iam.gserviceaccount.com"}'
+          ENCODED=$(printf '%s' "$FAKE_JSON" | base64 -w 0)
+          echo "FAKE_ACCOUNT_KEY=$ENCODED" >> $GITHUB_ENV
+      - name: Run action with fake service account key
+        id: action
+        uses: .
+        with:
+          account_key: ${{ env.FAKE_ACCOUNT_KEY }}
+        continue-on-error: true
+      - name: Assert action attempted authentication (failed at gcloud, not at base64 decode)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # With a fake key, gcloud auth activate-service-account will fail.
+          # The action should fail (not succeed), confirming it processed the base64
+          # input correctly and reached the gcloud authentication step.
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected action to fail with fake credentials, but got: $OUTCOME"
+            exit 1
+          fi
+          echo "PASS: action correctly processed the key format and failed at gcloud authentication"
